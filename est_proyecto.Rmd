@@ -1,0 +1,315 @@
+---
+title: "Proyecto_Estadística"
+output: html_document
+date: "2024-04-15"
+---
+
+# Librerías
+```{r}
+library(readxl)
+library(tidyr)
+library(lubridate)
+library(xtable)
+library(ggplot2)
+library(dplyr)
+library(openxlsx)
+library(purrr)
+library(ggmosaic)
+library(rcompanion)
+library(DescTools)
+library(lsr)
+library(rcompanion)
+```
+
+# Base
+```{r}
+# Lectura de la base
+datos <- read_excel("BD-PROY-EST.xlsx", sheet = "Base Final")
+
+# Crear variable para el conteo de eventos
+datos$conteo <- 1
+  
+str(datos)
+```
+
+# Tablas
+```{r}
+# Tabla 1
+# Contar la cantidad de víctimas por subdelito y provincia
+tabla_genero_prov_del <- table(datos$Provincia, datos$SubDelito)
+
+# Convertir la tabla en un dataframe
+df_genero_prov_del <- as.data.frame.matrix(tabla_genero_prov_del)
+
+# Calcular total por columna
+total_por_columna <- colSums(df_genero_prov_del)
+
+# Agregar total por columna como una fila adicional al dataframe
+df_genero_prov_con_totales_del <- rbind(df_genero_prov_del, Total = total_por_columna)
+
+# Convertir el dataframe en un objeto xtable
+tabla_latex <- xtable(df_genero_prov_con_totales_del)
+
+# Imprimir la tabla en formato LaTeX
+print(tabla_latex, include.rownames = TRUE)
+```
+
+```{r}
+# Tabla 2
+# Contar la cantidad de víctimas por subdelito y provincia
+tabla_genero_prov_hora <- table(datos$Hora, datos$Provincia)
+
+# Convertir la tabla en un dataframe
+df_genero_prov_hora <- as.data.frame.matrix(tabla_genero_prov_hora)
+
+# Calcular total por columna
+total_por_columna <- colSums(df_genero_prov_hora)
+
+# Agregar total por columna como una fila adicional al dataframe
+df_genero_prov_con_totales_hora <- rbind(df_genero_prov_hora, Total = total_por_columna)
+
+# Convertir el dataframe en un objeto xtable
+tabla_latex <- xtable(df_genero_prov_con_totales_hora)
+
+# Imprimir la tabla en formato LaTeX
+print(tabla_latex, include.rownames = TRUE)
+```
+
+```{r}
+# Tabla 3
+# Contar la cantidad de víctimas por género y provincia
+tabla_genero_provincia <- table(datos$Genero, datos$Provincia)
+
+# Convertir la tabla en un dataframe
+df_genero_provincia <- as.data.frame.matrix(tabla_genero_provincia)
+
+# Calcular total por columna
+total_por_columna <- colSums(df_genero_provincia)
+
+# Agregar total por columna como una fila adicional al dataframe
+df_genero_provincia_con_totales <- rbind(df_genero_provincia, Total = total_por_columna)
+
+# Convertir el dataframe en un objeto xtable
+tabla_latex <- xtable(df_genero_provincia_con_totales)
+
+# Imprimir la tabla en formato LaTeX
+print(tabla_latex, include.rownames = TRUE)
+```
+
+
+
+# Gráficos
+```{r}
+# Gráfico 1: Distribución de Delitos por Provincia
+grafico1 <- ggplot(datos, aes(x = Provincia, fill = Provincia)) +
+  geom_bar() +
+  labs(title = "Distribución de Asaltos por Provincia",
+       x = "Provincia",
+       y = "Cantidad de Asaltos") +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal()
+
+# Guardar el gráfico en formato PDF
+ggsave("grafico_delitos_por_provincia.pdf", plot = grafico1, width = 8, height = 6)
+```
+
+
+```{r}
+# Gráfico 2: Distribución de Horas de Delitos por Provincia
+grafico2 <- ggplot(datos, aes(x = Hora, fill = SubDelito)) +
+  geom_bar(position = "dodge", alpha = 0.6) +
+  labs(title = "Distribución de Horas de Delitos por Provincia",
+       x = "Rango Horario",
+       y = "Cantidad de Asaltos") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+ggsave("grafico_delitos_por_hora.pdf", plot = grafico2, width = 8, height = 6)
+```
+
+
+```{r}
+# Gráfico 3: 
+# Convertir la fecha en un formato de año
+datos$Año <- as.integer(format(as.Date(datos$Fecha), "%Y"))
+
+# Calcular la cantidad de delitos por año, subdelito y género
+delitos_por_ano_subdelito_genero <- datos %>%
+  group_by(Año, SubDelito, Genero) %>%
+  summarise(Cantidad_delitos = n())
+
+# Graficar la cantidad de delitos por año, subdelito y género
+grafico3 <- ggplot(delitos_por_ano_subdelito_genero, aes(x = Año, y = Cantidad_delitos, color = Genero)) +
+  geom_line(size = 1) +
+  facet_wrap(~SubDelito, scales = "free_y", nrow = 2) +
+  labs(x = "Año", y = "Cantidad de Asaltos", title = "Evolución de la cantidad de delitos por subdelito y género") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Guardar el gráfico en un archivo PDF
+ggsave("grafico_delitos_por_ano_subdelito_genero.pdf", plot = grafico3, width = 12, height = 8)
+```
+
+
+# Resultados
+```{r}
+# Tabla de Contingencias 1
+# Contabilizar el número de asaltos por provincia y subdelito
+conteo_asaltos <- aggregate(conteo ~ Provincia + SubDelito, data = datos, FUN = length)
+
+# Convertir en tabla de contingencia
+tabla_contingencia_prov_sub <- xtabs(conteo ~ Provincia + SubDelito, data = conteo_asaltos)
+
+# Prueba de chi-cuadrado
+resultado_prueba1 <- chisq.test(tabla_contingencia_prov_sub)
+
+# Resultados
+resultado_prueba1
+
+# Latex
+tabla_latex1 <- xtable(tabla_contingencia_prov_sub)
+
+# Calcular el coeficiente de Cramer
+cramer_v1 <- cramerV(tabla_contingencia_prov_sub)
+
+# Calcular el coeficiente de contingencias de Pearson
+pearson_c1 <- sqrt(resultado_prueba1$statistic / (resultado_prueba1$statistic + sum(tabla_contingencia_prov_sub)))
+
+# Imprimir resultados
+resultado_prueba1
+cramer_v1
+pearson_c1
+```
+
+
+```{r}
+# Tabla de Contingencias 2
+# Contabilizar el número de asaltos por provincia y genero
+conteo_asaltos <- aggregate(conteo ~ Provincia + Genero, data = datos, FUN = length)
+
+# Convertir en tabla de contingencia
+tabla_contingencia_prov_gen <- xtabs(conteo ~ Provincia + Genero, data = conteo_asaltos)
+
+# Prueba de chi-cuadrado de independencia
+resultado_prueba2 <- chisq.test(tabla_contingencia_prov_gen)
+
+# Resultados
+resultado_prueba2
+
+# Latex
+tabla_latex2 <- xtable
+
+# Calcular el coeficiente de Cramer
+cramer_v2 <- cramerV(tabla_contingencia_prov_gen)
+
+# Calcular el coeficiente de contingencias de Pearson
+pearson_c2 <- sqrt(resultado_prueba2$statistic / (resultado_prueba2$statistic + sum(tabla_contingencia_prov_gen)))
+
+# Imprimir resultados
+resultado_prueba2
+cramer_v2
+pearson_c2
+```
+
+```{r}
+# Tabla de Contingencias 3
+# Contabilizar el número de asaltos subdelito y genero
+conteo_asaltos <- aggregate(conteo ~ SubDelito + Genero, data = datos, FUN = length)
+
+# Convertir en tabla de contingencia
+tabla_contingencia_sub_gen <- xtabs(conteo ~ SubDelito + Genero, data = conteo_asaltos)
+
+# Prueba de chi-cuadrado de independencia
+resultado_prueba3 <- chisq.test(tabla_contingencia_sub_gen)
+
+# Resultados
+resultado_prueba3
+
+# Latex
+tabla_latex3 <- xtable(tabla_contingencia_sub_gen)
+
+# Calcular el coeficiente de Cramer
+cramer_v3 <- cramerV(tabla_contingencia_sub_gen)
+
+# Calcular el coeficiente de contingencias de Pearson
+pearson_c3 <- sqrt(resultado_prueba3$statistic / (resultado_prueba3$statistic + sum(tabla_contingencia_sub_gen)))
+
+# Imprimir resultados
+resultado_prueba3
+cramer_v3
+pearson_c3
+```
+
+```{r}
+# Tabla de Contingencias 4
+# Contabilizar el número de asaltos hora y subdelito
+conteo_asaltos <- aggregate(conteo ~ Hora + SubDelito, data = datos, FUN = length)
+
+# Convertir en tabla de contingencia
+tabla_contingencia_hor_sub <- xtabs(conteo ~ Hora + SubDelito, data = conteo_asaltos)
+
+# Prueba de chi-cuadrado de independencia
+resultado_prueba4 <- chisq.test(tabla_contingencia_hor_sub)
+
+# Resultados
+resultado_prueba4
+
+# Latex
+tabla_latex4 <- xtable(tabla_contingencia_hor_sub)
+
+# Calcular el coeficiente de Cramer
+cramer_v4 <- cramerV(tabla_contingencia_hor_sub)
+
+# Calcular el coeficiente de contingencias de Pearson
+pearson_c4 <- sqrt(resultado_prueba4$statistic / (resultado_prueba4$statistic + sum(tabla_contingencia_hor_sub)))
+
+# Imprimir resultados
+resultado_prueba4
+cramer_v4
+pearson_c4
+```
+
+```{r}
+# Tabla de Contingencias 5
+# Contabilizar el número de asaltos hora y Provincia
+conteo_asaltos <- aggregate(conteo ~ Hora + Provincia, data = datos, FUN = length)
+
+# Convertir en tabla de contingencia
+tabla_contingencia_hor_pro <- xtabs(conteo ~ Hora + Provincia, data = conteo_asaltos)
+
+# Prueba de chi-cuadrado de independencia
+resultado_prueba5 <- chisq.test(tabla_contingencia_hor_pro)
+
+# Resultados
+resultado_prueba5
+
+# Latex
+tabla_latex5 <- xtable(tabla_contingencia_hor_pro)
+
+# Calcular el coeficiente de Cramer
+cramer_v5 <- cramerV(tabla_contingencia_hor_pro)
+
+# Calcular el coeficiente de contingencias de Pearson
+pearson_c5 <- sqrt(resultado_prueba5$statistic / (resultado_prueba5$statistic + sum(tabla_contingencia_hor_pro)))
+
+# Imprimir resultados
+resultado_prueba5
+cramer_v5
+pearson_c5
+```
+
+```{r}
+# Consolidar los resultados en una tabla
+resultados <- data.frame(
+  Tabla = c("Provincia vs SubDelito", "Provincia vs Genero", "SubDelito vs Genero", "Hora vs SubDelito", "Hora vs Provincia"),
+  Cramer_V = c(cramer_v1, cramer_v2, cramer_v3, cramer_v4, cramer_v5),
+  Pearson_C = c(pearson_c1, pearson_c2, pearson_c3, pearson_c4, pearson_c5)
+)
+
+# Imprimir la tabla de resultados
+print(resultados)
+
+tabla_latex6 <- xtable(resultados)
+tabla_latex6
+```
