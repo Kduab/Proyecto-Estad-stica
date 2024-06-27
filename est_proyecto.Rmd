@@ -97,7 +97,6 @@ print(tabla_latex, include.rownames = TRUE)
 ```
 
 
-
 # Gráficos
 ```{r}
 # Gráfico 1: Distribución de Delitos por Provincia
@@ -151,8 +150,7 @@ grafico3 <- ggplot(delitos_por_ano_subdelito_genero, aes(x = Año, y = Cantidad_
 ggsave("grafico_delitos_por_ano_subdelito_genero.pdf", plot = grafico3, width = 12, height = 8)
 ```
 
-
-# Resultados
+# Tablas
 ```{r}
 # Tabla de Contingencias 1
 # Contabilizar el número de asaltos por provincia y subdelito
